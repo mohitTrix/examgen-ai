@@ -52,15 +52,18 @@ export async function completeJson(
           signal: AbortSignal.timeout(env.ai.timeoutMs),
         }
       );
-    } catch (e) {
-      if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+    } catch (error) {
+      if (
+        error.name === 'TimeoutError' ||
+        error.name === 'AbortError'
+      ) {
         throw new HttpError(
           504,
           'The AI service timed out. Please try again.'
         );
       }
 
-      console.error('AI network error:', e.message);
+      console.error('AI network error:', error.message);
 
       throw new HttpError(
         502,
@@ -73,7 +76,10 @@ export async function completeJson(
       const content = data?.choices?.[0]?.message?.content;
 
       if (!content) {
-        throw new HttpError(502, 'The AI returned an empty response.');
+        throw new HttpError(
+          502,
+          'The AI service returned an empty response.'
+        );
       }
 
       return parseJson(content);
@@ -87,29 +93,27 @@ export async function completeJson(
       details: errorText.slice(0, 500),
     });
 
-    // Daily quota exhaustion: do not retry.
+    // Never retry quota errors blindly.
     if (res.status === 429) {
-      const quotaExhausted =
-        /per.day|daily|requests per day|free_tier_requests/i.test(errorText);
+      const dailyQuota =
+        /per.day|daily|requests per day|free_tier_requests/i.test(
+          errorText
+        );
 
       throw new HttpError(
         429,
-        quotaExhausted
-          ? 'Gemini daily quota exhausted. Please try after the quota resets.'
+        dailyQuota
+          ? 'Gemini daily quota exhausted. Please try after quota reset.'
           : 'AI rate limit reached. Please wait before trying again.'
       );
     }
 
-    // Retry temporary server errors.
+    // Retry temporary server failures.
     if (res.status >= 500 && attempt < maxRetries) {
-      const delay = retryDelay * Math.pow(2, attempt);
+      const delay = retryDelay * (2 ** attempt);
 
       await new Promise(resolve => setTimeout(resolve, delay));
       continue;
-    }
-
-    if (res.status === 401 || res.status === 403) {
-      throw new HttpError(502, 'The AI API key was rejected.');
     }
 
     throw new HttpError(
