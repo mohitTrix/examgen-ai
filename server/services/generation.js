@@ -58,7 +58,7 @@ export async function generateQuestions(config, materialText, { existing = [], s
   const open = wanted.map((slot, index) => ({ ...slot, index }));
   const results = new Array(wanted.length);
   const rejected = { invalid: 0, ungrounded: 0, duplicate: 0 };
-  const maxRounds = Math.ceil(wanted.length / BATCH) + 3;
+  const maxRounds = Math.ceil(wanted.length / BATCH);
 
   for (let round = 0; round < maxRounds && open.length; round++) {
     const batch = open.slice(0, BATCH);
