@@ -2,15 +2,29 @@
 import { env } from '../config/env.js';
 import { HttpError } from '../utils/httpError.js';
 
+
 export function parseJson(content) {
-  const cleaned = String(content)
-    .trim()
+  let cleaned = String(content || '').trim();
+
+  // Remove Markdown code fences.
+  cleaned = cleaned
     .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/, '');
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  // Extract JSON if the model adds extra text around it.
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+
+  if (start !== -1 && end > start) {
+    cleaned = cleaned.slice(start, end + 1);
+  }
 
   try {
     return JSON.parse(cleaned);
-  } catch {
+  } catch (error) {
+    console.error('[AI] Invalid JSON response:', cleaned.slice(0, 1000));
+
     throw new HttpError(
       502,
       'The AI returned invalid JSON. Please try again.'
