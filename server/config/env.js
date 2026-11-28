@@ -11,6 +11,7 @@ export const env = {
     apiKey: process.env.AI_API_KEY || '',
     baseUrl: (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, ''),
     model: process.env.AI_MODEL || '',
+    fallbackModels: list(process.env.AI_FALLBACK_MODELS || ''),
     jsonMode: process.env.AI_JSON_MODE !== 'false',
     timeoutMs: Number(process.env.AI_TIMEOUT_MS) || 90000,
     contextChars: Number(process.env.AI_CONTEXT_CHARS) || 40000,
